@@ -9,6 +9,7 @@
     <button onclick="generateInvoice()">Generate Invoice</button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
     <!-- Include your custom font here -->
     <script>
 		class InvoiceGenerator {
@@ -16,7 +17,7 @@
 				this.doc = new window.jspdf.jsPDF();
 				this.options = {
 					companyName: 'McZEN Technologies',
-					companyId: '000000',
+					companyId: '000000T',
 					primaryColor: '#D00000',
 					secondaryColor: '#555555',
 					fontSize: {
@@ -27,7 +28,7 @@
 					},
 					margins: {
 						left: 15,
-						right: 190,
+						right: 195,
 						top: 20
 					}
 				};
@@ -70,45 +71,49 @@
 			}
 
 			_drawLineItemsHeader() {
-				this._setFont(this.options.fontSize.normal, '#000');
-				this.doc.setFillColor(230, 230, 230);
-				this.doc.rect(10, 100, 190, 10, 'F');
-				
-				const headers = ['Objet', 'Quantité', 'Prix unitaire', 'Montant'];
-				const positions = [15, 120, 140, 190];
-				const alignments = ['left', 'left', 'left', 'right'];
-
-				headers.forEach((header, index) => {
-					this.doc.text(header, positions[index], 107, { align: alignments[index] });
+				const headers = [['Objet', 'Quantité', 'Prix unitaire', 'Montant']];
+				this.doc.autoTable({
+					startY: 100,
+					head: headers,
+					theme: 'grid',
+					headStyles: { fillColor: [230, 230, 230] },
+					styles: { fontSize: this.options.fontSize.normal, textColor: '#000' }
 				});
 			}
 
 			_drawLineItems(items) {
-				let y = 117;
 				let subtotal = 0;
-
-				items.forEach(item => {
+				const body = items.map(item => {
 					const total = item.quantity * item.unitPrice;
 					subtotal += total;
-
-					this.doc.text(item.objet, 15, y);
-					this.doc.text(`${item.quantity}`, 120, y);
-					this.doc.text(`${(item.unitPrice / 1000).toFixed(3)} TND`, 140, y);
-					this.doc.text(`${(total / 1000).toFixed(3)} TND`, 190, y, { align: 'right' });
-					y += 10;
+					return [
+						item.objet, 
+						item.quantity.toString(), 
+						`${(item.unitPrice / 1000).toFixed(3)} TND`, 
+						`${(total / 1000).toFixed(3)} TND`
+					];
 				});
 
-				return { subtotal, y };
+				const finalY = this.doc.previousAutoTable.finalY;
+				this.doc.autoTable({
+					startY: finalY,
+					body: body,
+					theme: 'grid',
+					styles: { fontSize: this.options.fontSize.normal, textColor: '#000' },
+					columnStyles: {
+						0: { cellWidth: 'wrap' } // This will wrap text in the first column if it's too long
+					}
+				});
+
+				return { subtotal, y: finalY };
 			}
 
 			_drawTotals(subtotal, y) {
 				const tax = subtotal * 0.19;
 				const fiscalStamp = 1000;
 				const grandTotal = subtotal + tax + fiscalStamp;
-
-				y += 10;
-				this.doc.line(10, y, 200, y);
-				y += 5;
+				
+				y += 20;
 
 				const totalsConfig = [
 					{ label: 'Sous-total:', value: subtotal },
@@ -117,7 +122,7 @@
 				];
 
 				totalsConfig.forEach(config => {
-					y += 10;
+					y += 7;
 					this.doc.text(config.label, 140, y);
 					this.doc.text(`${(config.value / 1000).toFixed(3)} TND`, 190, y, { align: 'right' });
 				});
@@ -155,34 +160,37 @@
 				return this.doc;
 			}
 		}
-		
-		// Usage Example
-		function generateInvoice() {
-			const invoiceGenerator = new InvoiceGenerator();
-			const doc = invoiceGenerator.generateInvoice(
-				{
-					name: 'XXX LLC',
-					id: '0000'
+
+
+	// Usage Example
+	function generateInvoice() {
+		const invoiceGenerator = new InvoiceGenerator();
+		const doc = invoiceGenerator.generateInvoice(
+			{
+				name: 'XXX LLC',
+				id: '000000X'
+			},
+			[
+				{ 
+					objet: 'Renouvellement Nom de domaine', 
+					quantity: 1, 
+					unitPrice: 14280 
 				},
-				[
-					{ 
-						objet: 'Renouvellement Nom de domaine', 
-						quantity: 1, 
-						unitPrice: 14280 
-					},
-					{ 
-						objet: 'Renouvellement Nom de domaine', 
-						quantity: 1, 
-						unitPrice: 48790 
-					}
-				],
-				{
-					number: '015',
-					date: '03 Juillet 2024'
+				{ 
+					objet: 'Renouvellement Nom de domaine', 
+					quantity: 1, 
+					unitPrice: 48790 
 				}
-			);
-			doc.save('facture.pdf');
-		}
+			],
+			{
+				number: '015',
+				date: '03 Juillet 2024'
+			}
+		);
+		doc.save('facture.pdf');
+	}
+
+
     </script>
 </body>
 </html>
