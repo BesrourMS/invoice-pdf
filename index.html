@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice PDF Generator</title>
+</head>
+<body>
+    <button onclick="generateInvoice()">Generate Invoice</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        function generateInvoice() {
+			// Initialize jsPDF
+			const doc = new window.jspdf.jsPDF();
+
+			// Custom styling functions
+			function setCustomStyle(size = 12, color = '#000', font = 'Arial') {
+				doc.setFontSize(size);
+				doc.setTextColor(color);
+				doc.setFont(font, 'normal'); // Assuming 'normal' for your custom font style
+			}
+
+			function addStyledText(text, x, y, size, color) {
+				setCustomStyle(size, color);
+				doc.text(text, x, y);
+			}
+
+			// Header
+			// Assuming you have a logo image
+			// doc.addImage('path/to/your/logo.png', 'PNG', 15, 15, 50, 15); // Adjust dimensions
+			addStyledText('Your Company Name', 70, 20, 16, '#333');
+			addStyledText('123 Invoice Street, Invoice City, IV 12345', 70, 30, 12, '#666');
+
+			// Invoice Details
+			setCustomStyle(12, '#000');
+			doc.text('Invoice #: INV-2024-001', 15, 50);
+			doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 60);
+
+			// Customer Details
+			setCustomStyle(14, '#333');
+			doc.text('Bill To:', 15, 80);
+			setCustomStyle(12, '#666');
+			doc.text('John Doe', 15, 90);
+			doc.text('456 Customer Street, Customer City, CC 67890', 15, 100);
+
+			// Line Items
+			let items = [
+				{ description: 'Product A', quantity: 2, price: 100 },
+				{ description: 'Product B', quantity: 1, price: 200 }
+			];
+
+			let y = 120;
+			items.forEach(item => {
+				addStyledText(item.description, 15, y, 12, '#000');
+				addStyledText(item.quantity.toString(), 120, y, 12, '#000');
+				addStyledText(`$${item.price}`, 140, y, 12, '#000');
+				addStyledText(`$${item.quantity * item.price}`, 160, y, 12, '#000');
+				y += 15;
+			});
+
+			// Totals
+			setCustomStyle(12, '#000', 'Arial');
+			let subtotal = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+			let tax = subtotal * 0.1; // 10% tax for example
+			let total = subtotal + tax;
+
+			doc.text('Subtotal:', 130, y);
+			doc.text(`$${subtotal.toFixed(2)}`, 160, y);
+			y += 15;
+			doc.text('Tax:', 130, y);
+			doc.text(`$${tax.toFixed(2)}`, 160, y);
+			y += 15;
+			setCustomStyle(14, '#D00', 'Arial'); // Red for emphasis
+			doc.text('Total:', 130, y);
+			doc.text(`$${total.toFixed(2)}`, 160, y);
+
+			// Footer or Notes
+			setCustomStyle(12, '#666');
+			doc.text('Thank you for your business!', 15, y + 30);
+
+			// Save PDF
+			doc.save('invoice.pdf');
+		}
+    </script>
+</body>
+</html>
