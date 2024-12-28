@@ -42,7 +42,7 @@
 				this.doc.setFont('Helvetica', style);
 			}
 
-			_drawHeader(invoiceNumber, invoiceDate) {
+			_drawHeader(invoiceNumber) {
 				// Company Name and Logo Space
 				this._setFont(this.options.fontSize.title, this.options.primaryColor);
 				this.doc.text(this.options.companyName, this.options.margins.left, this.options.margins.top);
@@ -63,25 +63,15 @@
 
 			_drawCustomerDetails(customer) {
 				this._setFont(this.options.fontSize.normal, '#000');
-				this.doc.text('A:', this.options.margins.left, 45);
+				this.doc.text('À:', this.options.margins.left, 45);
 
-				this._setFont(this.options.fontSize.normal, this.options.secondaryColor);
+				this._setFont(this.options.fontSize.small, this.options.secondaryColor);
 				this.doc.text(customer.name, this.options.margins.left, 53);
 				this.doc.text(`Identifiant unique : ${customer.id}`, this.options.margins.left, 60);
 			}
-
-			_drawLineItemsHeader() {
-				const headers = [['Objet', 'Quantité', 'Prix unitaire', 'Montant']];
-				this.doc.autoTable({
-					startY: 100,
-					head: headers,
-					theme: 'grid',
-					headStyles: { fillColor: [230, 230, 230] },
-					styles: { fontSize: this.options.fontSize.normal, textColor: '#000' }
-				});
-			}
-
+			
 			_drawLineItems(items) {
+				const headers = [['Objet', 'Quantité', 'Prix unitaire', 'Montant']];
 				let subtotal = 0;
 				const body = items.map(item => {
 					const total = item.quantity * item.unitPrice;
@@ -94,26 +84,42 @@
 					];
 				});
 
-				const finalY = this.doc.previousAutoTable.finalY;
 				this.doc.autoTable({
-					startY: finalY,
+					startY: 85,
+					head: headers,
 					body: body,
 					theme: 'grid',
-					styles: { fontSize: this.options.fontSize.normal, textColor: '#000' },
+					headStyles: { 
+						fillColor: [25, 25, 25], // Soft grey for header
+						textColor: '#fff',
+						fontStyle: 'bold',
+						fontSize: 12, // Emphasized header font size
+						halign: 'center' // Center-align header text
+					},
+					styles: { 
+						fontSize: this.options.fontSize.normal,
+						textColor: '#000',
+						lineColor: [255, 255, 255], // Subtle border lines
+						lineWidth: 0.5,
+						cellPadding: { top: 2, bottom: 2, left: 5, right: 5 } // Increased padding for clarity
+					},
 					columnStyles: {
-						0: { cellWidth: 'wrap' } // This will wrap text in the first column if it's too long
+						0: { cellWidth: 'auto', halign: 'left', valign: 'middle' }, // Align text horizontally and vertically
+						1: { halign: 'center', cellWidth: 30, valign: 'middle' },
+						2: { halign: 'center', cellWidth: 40, valign: 'middle' },
+						3: { halign: 'right', cellWidth: 40, valign: 'middle' } // Right-align for amounts
 					}
 				});
-
-				return { subtotal, y: finalY };
+				const finalY2 = this.doc.previousAutoTable.finalY;
+				return { subtotal, y: finalY2 };
 			}
-
+		
 			_drawTotals(subtotal, y) {
 				const tax = subtotal * 0.19;
 				const fiscalStamp = 1000;
 				const grandTotal = subtotal + tax + fiscalStamp;
 				
-				y += 20;
+				y += 15;
 
 				const totalsConfig = [
 					{ label: 'Sous-total:', value: subtotal },
@@ -124,14 +130,14 @@
 				totalsConfig.forEach(config => {
 					y += 7;
 					this.doc.text(config.label, 140, y);
-					this.doc.text(`${(config.value / 1000).toFixed(3)} TND`, 190, y, { align: 'right' });
+					this.doc.text(`${(config.value / 1000).toFixed(3)} TND`, 192, y, { align: 'right' });
 				});
 
 				y += 10;
 				this._setFont(this.options.fontSize.large, '#000');
 				this.doc.text('Total:', 140, y);
 				this._setFont(this.options.fontSize.large, this.options.primaryColor);
-				this.doc.text(`${(grandTotal / 1000).toFixed(3)} TND`, 190, y, { align: 'right' });
+				this.doc.text(`${(grandTotal / 1000).toFixed(3)} TND`, 192, y, { align: 'right' });
 
 				return { grandTotal, y };
 			}
@@ -139,20 +145,16 @@
 			_drawFooter(y) {
 				this._setFont(this.options.fontSize.small, this.options.secondaryColor);
 				this.doc.text('Les conditions de virement bancaire:', 15, y + 20);
-				this.doc.text('RIB : 0100 3051 1100 0102 6827', 15, y + 28);
-				this.doc.text('au nom de STE MCZEN TECHNOLOGIES', 15, y + 36);
+				this.doc.text(`RIB : ${this.options.rib}`, 15, y + 25);
 			}
 
 			generateInvoice(customerData, items, invoiceDetails) {
-				this._drawHeader(invoiceDetails.number, invoiceDetails.date);
+				this._drawHeader(invoiceDetails.number);
 				this._drawCustomerDetails(customerData);
 				
 				this._setFont(this.options.fontSize.normal, '#000');
-				this.doc.text('Date:', this.options.margins.right, 45, { align: 'right' });
-				this._setFont(this.options.fontSize.normal, this.options.secondaryColor);
-				this.doc.text(invoiceDetails.date, this.options.margins.right, 53, { align: 'right' });
+				this.doc.text(`Date: ${invoiceDetails.date}`, this.options.margins.right, 45, { align: 'right' });				
 
-				this._drawLineItemsHeader();
 				const { subtotal, y } = this._drawLineItems(items);
 				const { y: finalY } = this._drawTotals(subtotal, y);
 				this._drawFooter(finalY);
@@ -164,7 +166,13 @@
 
 	// Usage Example
 	function generateInvoice() {
-		const invoiceGenerator = new InvoiceGenerator();
+		const company = {
+			companyName: 'XXXL',
+			companyId: '000000T',
+			primaryColor: '#25b45b',
+			rib: '0100 3051 1100 0102 6827'
+		}
+		const invoiceGenerator = new InvoiceGenerator(company);
 		const doc = invoiceGenerator.generateInvoice(
 			{
 				name: 'XXX LLC',
@@ -172,7 +180,7 @@
 			},
 			[
 				{ 
-					objet: 'Renouvellement Nom de domaine', 
+					objet: 'Renouvellement Nom de domaine Renouvellement Nom de domaine', 
 					quantity: 1, 
 					unitPrice: 14280 
 				},
@@ -189,8 +197,6 @@
 		);
 		doc.save('facture.pdf');
 	}
-
-
     </script>
 </body>
 </html>
